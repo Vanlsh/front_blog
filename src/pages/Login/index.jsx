@@ -1,22 +1,25 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Navigate } from "react-router-dom";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import Paper from "@mui/material/Paper";
-import Button from "@mui/material/Button";
+import {
+  Typography,
+  TextField,
+  Paper,
+  Button,
+  Box,
+  Stack,
+} from "@mui/material";
 import { useForm } from "react-hook-form";
 import styles from "./Login.module.scss";
 import { fetchAuth, selectIsAuth } from "../../redux/slices/auth";
-import { convertLength } from "@mui/material/styles/cssUtils";
 
 export const Login = () => {
   const isAuth = useSelector(selectIsAuth);
+  const [loginError, setLoginError] = React.useState(false);
   const dispatch = useDispatch();
   const {
     register,
     handleSubmit,
-    setError,
     formState: { errors, isValid },
   } = useForm({
     defaultValues: {
@@ -25,15 +28,18 @@ export const Login = () => {
     },
     mode: "onChange",
   });
+
   const onSubmit = async (value) => {
+    setLoginError(false);
     const data = await dispatch(fetchAuth(value));
     if (!data.payload) {
-      alert("Failed to authenticate");
+      setLoginError(true);
     }
     if ("token" in data.payload) {
       window.localStorage.setItem("token", data.payload.token);
     }
   };
+
   if (isAuth) {
     return <Navigate to={"/"} />;
   }
@@ -60,9 +66,23 @@ export const Login = () => {
           {...register("password", { required: "Enter your password" })}
           fullWidth
         />
-        <Button type="submit" size="large" variant="contained" fullWidth>
+
+        <Button
+          disabled={!isValid}
+          type="submit"
+          size="large"
+          variant="contained"
+          fullWidth
+        >
           Enter
         </Button>
+        {loginError && (
+          <Stack direction="row" justifyContent="center">
+            <Typography variant="h7" sx={{ color: "red", p: 0.5 }}>
+              Wrong login or password!
+            </Typography>
+          </Stack>
+        )}
       </form>
     </Paper>
   );

@@ -1,77 +1,68 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useNavigate, Navigate, useParams } from "react-router-dom";
-import TextField from "@mui/material/TextField";
-import Paper from "@mui/material/Paper";
-import Button from "@mui/material/Button";
 import SimpleMDE from "react-simplemde-editor";
 import { selectIsAuth } from "../../redux/slices/auth";
 import "easymde/dist/easymde.min.css";
-import styles from "./AddPost.module.scss";
 import axios from "../../axios";
+import { URL_BACK_END } from "../../config.js";
+import TextField from "@mui/material/TextField";
+import { CardMedia, Paper, Button, Stack } from "@mui/material";
 
 export const AddPost = () => {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const isAuth = useSelector(selectIsAuth);
-  const navigate = useNavigate();
-  const [loading, setLoading] = React.useState(false);
   const [text, setText] = React.useState("");
   const [title, setTitle] = React.useState("");
-  const [tags, setTags] = React.useState([]);
+  const [tags, setTags] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
+  const [selectedFile, setSelectedFile] = React.useState(null);
+  const [preview, setPreview] = React.useState(null);
   const inputFileRef = React.useRef(null);
-  const handleChangeFile = async (event) => {
-    try {
-      const formData = new FormData();
-      const file = event.target.files[0];
-      formData.append("image", file);
-      const { data } = await axios.post("/uploads", formData);
-      setImageUrl(data.url);
-    } catch (error) {
-      console.warn(error);
-      alert("Error!!!");
-    }
-  };
-
-  const onClickRemoveImage = () => {
-    setImageUrl("");
-  };
-
-  const onChange = React.useCallback((value) => {
-    setText(value);
-  }, []);
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     if (id) {
       axios.get(`/post/${id}`).then(({ data }) => {
         setTitle(data.title);
         setText(data.text);
-        setTags(data.tags.join(","));
+        setTags(data.tags.join(", "));
         setImageUrl(data.imageUrl);
       });
     }
   }, []);
-  const onSubmit = async () => {
-    try {
-      setLoading(true);
-      const fields = {
-        title,
-        tags,
-        text,
-        imageUrl,
-      };
-      const { data } = isEdit
-        ? await axios.patch(`/post/${id}`, fields)
-        : await axios.post("/post", fields);
-      const _id = isEdit ? id : data._id;
 
-      navigate(`/posts/${_id}`);
-    } catch (error) {
-      console.warn(error);
-      alert("Error when creating the article");
+  React.useEffect(() => {
+    if (!selectedFile) {
+      setPreview(null);
+      return;
     }
+    const objectUrl = URL.createObjectURL(selectedFile);
+    setPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [selectedFile]);
+
+  const onSelectFile = (e) => {
+    if (!e.target.files || !e.target.files.length) {
+      setSelectedFile(null);
+      return;
+    }
+    setSelectedFile(e.target.files[0]);
+    setImageUrl("");
+    e.target.value = null;
   };
+
+  const onClickRemoveImage = () => {
+    setSelectedFile(null);
+    setImageUrl("");
+  };
+
+  // for SimpleMDE
+  const onChange = React.useCallback(async (value) => {
+    setText(value);
+  }, []);
 
   const options = React.useMemo(
     () => ({
@@ -87,11 +78,32 @@ export const AddPost = () => {
     }),
     []
   );
+  //
+
+  const onSubmit = async () => {
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("tags", tags);
+    formData.append("text", text);
+    if (selectedFile) {
+      formData.append("image", selectedFile);
+    }
+    formData.append("imageUrl", imageUrl);
+    try {
+      const { data } = isEdit
+        ? await axios.patch(`/post/${id}`, formData)
+        : await axios.post("/post", formData);
+      const _id = isEdit ? id : data._id;
+      navigate(`/posts/${_id}`);
+    } catch (error) {
+      console.warn(error);
+      alert(error.massage);
+    }
+  };
 
   if (!isAuth) {
     return <Navigate to={"/"} />;
   }
-
   return (
     <Paper elevation={0} style={{ padding: 30 }}>
       <Button
@@ -104,10 +116,11 @@ export const AddPost = () => {
       <input
         ref={inputFileRef}
         type="file"
-        onChange={handleChangeFile}
+        onChange={onSelectFile}
         hidden
+        accept=".png, .jpg, .jpeg"
       />
-      {imageUrl && (
+      {(selectedFile || imageUrl) && (
         <>
           <Button
             variant="contained"
@@ -116,45 +129,46 @@ export const AddPost = () => {
           >
             Delete
           </Button>
-          <img
-            className={styles.image}
-            src={`http://localhost:4444/api${imageUrl}`}
+          <CardMedia
+            component="img"
+            height="100%"
+            src={
+              preview ? preview : imageUrl && `${URL_BACK_END}/api${imageUrl}`
+            }
             alt="Uploaded"
           />
         </>
       )}
-      <br />
-      <br />
-      <TextField
-        classes={{ root: styles.title }}
-        variant="standard"
-        placeholder="Title of the article..."
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        fullWidth
-      />
-      <TextField
-        classes={{ root: styles.tags }}
-        variant="standard"
-        placeholder="Tags"
-        value={tags}
-        onChange={(e) => setTags(e.target.value)}
-        fullWidth
-      />
-      <SimpleMDE
-        className={styles.editor}
-        value={text}
-        onChange={onChange}
-        options={options}
-      />
-      <div className={styles.buttons}>
-        <Button onClick={onSubmit} size="large" variant="contained">
-          {isEdit ? "Edit" : "Publish"}
-        </Button>
-        <a href="/">
-          <Button size="large">Cancel</Button>
-        </a>
-      </div>
+      <Stack sx={{ pt: 3 }} spacing={3}>
+        <TextField
+          variant="standard"
+          placeholder="Title of the article..."
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          fullWidth
+        />
+        <TextField
+          variant="standard"
+          placeholder="Tags"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          fullWidth
+        />
+        <SimpleMDE value={text} onChange={onChange} options={options} />
+        <Stack direction="row" spacing={3}>
+          <Button onClick={onSubmit} size="large" variant="contained">
+            {isEdit ? "Edit" : "Publish"}
+          </Button>
+          <Link
+            to="/"
+            style={{
+              textDecoration: "none",
+            }}
+          >
+            <Button size="large">Cancel</Button>
+          </Link>
+        </Stack>
+      </Stack>
     </Paper>
   );
 };

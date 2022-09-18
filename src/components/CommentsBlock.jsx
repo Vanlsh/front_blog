@@ -17,13 +17,17 @@ import EditIcon from "@mui/icons-material/Edit";
 import { EditComment } from "./EditComment";
 import { fetchPostComments, fetchComments } from "../redux/slices/comment";
 import axios from "../axios";
+import { URL_BACK_END } from "../config.js";
+import { getRandomColor } from "../helper/View";
+
+const randomColor = getRandomColor();
 
 export const CommentsBlock = ({ children }) => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const { comments, loading } = useSelector((state) => state.comment);
   const userData = useSelector((state) => state.auth.data);
-  const isCommentLoading = loading === "loading";
+  const isCommentLoading = loading === "loading" || loading === "error";
   const [editId, setEditId] = React.useState("");
 
   React.useEffect(() => {
@@ -61,7 +65,17 @@ export const CommentsBlock = ({ children }) => {
                 {isCommentLoading ? (
                   <Skeleton variant="circular" width={40} height={40} />
                 ) : (
-                  <Avatar alt={obj.user.fullName} src={obj.user.avatarUrl} />
+                  <Avatar
+                    alt={obj.user.fullName}
+                    src={
+                      obj.user.avatarUrl &&
+                      `${URL_BACK_END}/api${obj.user.avatarUrl}`
+                    }
+                    sx={{ backgroundColor: randomColor }}
+                  >
+                    {" "}
+                    {obj.user.fullName[0]}
+                  </Avatar>
                 )}
               </ListItemAvatar>
               {isCommentLoading ? (

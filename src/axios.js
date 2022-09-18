@@ -1,7 +1,8 @@
 import axios from "axios";
+import { URL_BACK_END } from "./config.js";
 
 const instance = axios.create({
-  baseURL: "https://yarovyiblog.herokuapp.com/api",
+  baseURL: `${URL_BACK_END}/api`,
 });
 
 instance.interceptors.request.use((config) => {

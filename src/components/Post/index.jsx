@@ -1,5 +1,4 @@
 import React from "react";
-import clsx from "clsx";
 import { useDispatch } from "react-redux";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Clear";
@@ -7,83 +6,121 @@ import EditIcon from "@mui/icons-material/Edit";
 import EyeIcon from "@mui/icons-material/RemoveRedEyeOutlined";
 import CommentIcon from "@mui/icons-material/ChatBubbleOutlineOutlined";
 import { Link } from "react-router-dom";
-import styles from "./Post.module.scss";
 import { UserInfo } from "../UserInfo";
 import { PostSkeleton } from "./Skeleton";
 import { fetchRemovePost } from "../../redux/slices/posts";
+import { URL_BACK_END } from "../../config.js";
+import {
+  Box,
+  Card,
+  CardActions,
+  CardContent,
+  CardMedia,
+  Stack,
+  Typography,
+} from "@mui/material";
 
-export const Post = ({
-  id,
-  title,
-  createdAt,
-  imageUrl,
-  user,
-  viewsCount,
-  commentsCount,
-  tags,
-  children,
-  isFullPost,
-  isLoading,
-  isEditable,
-}) => {
+export const Post = ({ post, children, isFullPost, isLoading, isEditable }) => {
   const dispatch = useDispatch();
+
+  const onClickRemove = () => {
+    if (window.confirm("Are you sure?")) dispatch(fetchRemovePost(post._id));
+  };
+
   if (isLoading) {
     return <PostSkeleton />;
   }
 
-  const onClickRemove = () => {
-    if (window.confirm("Are you sure?")) dispatch(fetchRemovePost(id));
-  };
-
   return (
-    <div className={clsx(styles.root, { [styles.rootFull]: isFullPost })}>
-      {isEditable && (
-        <div className={styles.editButtons}>
-          <Link to={`/posts/${id}/edit`}>
-            <IconButton color="primary">
-              <EditIcon />
-            </IconButton>
-          </Link>
-          <IconButton onClick={onClickRemove} color="secondary">
-            <DeleteIcon />
-          </IconButton>
-        </div>
-      )}
-      {imageUrl && (
-        <img
-          className={clsx(styles.image, { [styles.imageFull]: isFullPost })}
-          src={`https://yarovyiblog.herokuapp.com/api${imageUrl}`}
-          alt={title}
-        />
-      )}
-      <div className={styles.wrapper}>
-        <UserInfo {...user} additionalText={createdAt} />
-        <div className={styles.indention}>
-          <h2
-            className={clsx(styles.title, { [styles.titleFull]: isFullPost })}
+    <Card
+      elevation={0}
+      sx={{
+        maxWidth: "100%",
+        mb: 2,
+        "&:hover": {
+          background: "dark",
+        },
+      }}
+    >
+      <Box sx={{ position: "relative" }}>
+        {isEditable && (
+          <Box
+            sx={{
+              position: "absolute",
+              top: 3,
+              right: 3,
+              backgroundColor: "",
+              "&:hover": {
+                backgroundColor: "primary",
+              },
+            }}
           >
-            {isFullPost ? title : <Link to={`/posts/${id}`}>{title}</Link>}
-          </h2>
-          <ul className={styles.tags}>
-            {tags.map((tag) => (
-              <li key={tag}>
-                <Link to={`/tags/${tag}`}>#{tag}</Link>
-              </li>
-            ))}
-          </ul>
-          {children && <div className={styles.content}>{children}</div>}
-          <ul className={styles.postDetails}>
-            <li>
-              <EyeIcon />
-              <span>{viewsCount}</span>
-            </li>
-            <li>
-              <CommentIcon />
-              <span>{commentsCount}</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
+            <Link to={`/posts/${post._id}/edit`}>
+              <IconButton color="primary">
+                <EditIcon />
+              </IconButton>
+            </Link>
+            <IconButton onClick={onClickRemove} color="secondary">
+              <DeleteIcon />
+            </IconButton>
+          </Box>
+        )}
+        {post.imageUrl && (
+          <CardMedia
+            component="img"
+            height="100%"
+            image={`${URL_BACK_END}/api${post.imageUrl}`}
+            alt="img"
+          />
+        )}
+      </Box>
+      <UserInfo {...post.user} additionalText={post.createdAt} />
+      <CardContent sx={{ pt: 0 }}>
+        <Typography variant="h4" sx={{ color: "black", fontWeight: 500 }}>
+          {isFullPost ? (
+            post.title
+          ) : (
+            <Link
+              style={{ color: "black", textDecoration: "none" }}
+              to={`/posts/${post._id}`}
+            >
+              {post.title}
+            </Link>
+          )}
+        </Typography>
+        <Stack direction="row" spacing={1}>
+          {post.tags.map((tag) => (
+            <Box key={tag}>
+              <Link
+                style={{
+                  textDecoration: "none",
+                  color: "gray",
+                }}
+                to={`/tags/${tag}`}
+              >
+                {`#${tag}`}
+              </Link>
+            </Box>
+          ))}
+        </Stack>
+        {children && <Box>{children}</Box>}
+        <CardActions sx={{ mt: 1 }}>
+          <Stack elevation={0} direction="row" spacing={2}>
+            <Stack alignItems={"center"} direction="row" spacing={1}>
+              <EyeIcon sx={{ height: "20px", color: "gray" }} />
+              <Typography sx={{ fontSize: "15px", color: "gray" }}>
+                {post.viewsCount}
+              </Typography>
+            </Stack>
+            <Stack alignItems={"center"} direction="row" spacing={1}>
+              <CommentIcon sx={{ height: "15px", color: "gray" }} />
+              <Typography sx={{ fontSize: "15px", color: "gray" }}>
+                {post.comments.length}
+              </Typography>
+            </Stack>
+          </Stack>
+        </CardActions>
+      </CardContent>
+    </Card>
   );
 };
